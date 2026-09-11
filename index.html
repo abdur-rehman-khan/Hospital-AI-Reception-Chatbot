@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City General Hospital — AI Reception</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0D1B2A; --blue: #1565C0; --blue2: #1976D2; --white: #FFFFFF;
+    --offwhite: #F4F8FF; --slate: #546E7A; --light: #E3F2FD;
+    --red: #C62828; --orange: #E65100; --green: #2E7D32; --warn: #F57F17;
+  }
+  html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--offwhite); color: var(--navy); }
+  .shell { display: grid; grid-template-columns: 270px 1fr; grid-template-rows: 64px 1fr; height: 100vh; max-width: 1200px; margin: 0 auto; }
+  header { grid-column: 1 / -1; background: var(--navy); display: flex; align-items: center; gap: 14px; padding: 0 24px; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+  .logo { width: 36px; height: 36px; background: var(--blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  header h1 { color: var(--white); font-size: 17px; font-weight: 600; }
+  header p  { color: #90A4AE; font-size: 12px; }
+  .status-dot { margin-left: auto; display: flex; align-items: center; gap: 6px; color: #A5D6A7; font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #4CAF50; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .sidebar { background: var(--white); border-right: 1px solid #E0E7EF; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .info-card { border-radius: 10px; padding: 14px; }
+  .info-card h3 { font-size: 11px; font-weight: 700; letter-spacing: .04em; margin-bottom: 10px; text-transform: uppercase; }
+  .info-card ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .info-card li { font-size: 13px; line-height: 1.4; display: flex; gap: 8px; }
+  .card-ai    { background: #E3F2FD; } .card-ai h3    { color: var(--blue); }
+  .card-human { background: #FFF3E0; } .card-human h3 { color: var(--orange); }
+  .card-emer  { background: #FFEBEE; } .card-emer h3  { color: var(--red); }
+  .card-dept  { background: #F3E5F5; } .card-dept h3  { color: #6A1B9A; }
+  .dept-item  { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #EDE7F6; }
+  .dept-item:last-child { border: none; }
+  .dept-floor { color: #7B1FA2; font-weight: 600; }
+
+  .chat-area { display: flex; flex-direction: column; overflow: hidden; }
+  .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-thumb { background: #CFD8DC; border-radius: 2px; }
+
+  .msg { display: flex; gap: 10px; align-items: flex-end; max-width: 78%; }
+  .msg.user { margin-left: auto; flex-direction: row-reverse; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .avatar.bot  { background: var(--blue); }
+  .avatar.user { background: var(--slate); }
+  .bubble { padding: 11px 15px; border-radius: 18px; font-size: 14px; line-height: 1.55; max-width: 100%; }
+  .msg.bot  .bubble { background: var(--white); color: var(--navy); border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .msg.user .bubble { background: var(--blue); color: var(--white); border-bottom-right-radius: 4px; }
+
+  .alert-bubble { border-radius: 12px; padding: 12px 16px; margin: 2px 0; font-size: 13px; font-weight: 600; display: flex; gap: 10px; align-items: flex-start; }
+  .alert-bubble.critical { background: #FFEBEE; border: 1.5px solid var(--red); color: var(--red); }
+  .alert-bubble.urgent   { background: #FFF8E1; border: 1.5px solid var(--warn); color: #7F6000; }
+
+  .typing { display: flex; gap: 5px; align-items: center; padding: 14px 16px; }
+  .typing span { width: 7px; height: 7px; background: #90A4AE; border-radius: 50%; animation: bounce .9s infinite; }
+  .typing span:nth-child(2) { animation-delay: .15s; }
+  .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-7px)} }
+
+  .quick-replies { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px 12px; }
+  .qr-btn { background: var(--white); border: 1.5px solid var(--blue); color: var(--blue); border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; }
+  .qr-btn:hover { background: var(--blue); color: var(--white); }
+
+  .input-bar { background: var(--white); border-top: 1px solid #E0E7EF; padding: 14px 16px; display: flex; gap: 10px; align-items: center; }
+  #userInput { flex: 1; border: 1.5px solid #CFD8DC; border-radius: 24px; padding: 10px 18px; font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s; background: var(--offwhite); }
+  #userInput:focus { border-color: var(--blue); background: var(--white); }
+  #sendBtn { width: 42px; height: 42px; background: var(--blue); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  #sendBtn:hover { background: var(--blue2); }
+  #sendBtn svg { fill: white; }
+  .icon-btn { background: none; border: 1.5px solid #CFD8DC; border-radius: 24px; padding: 9px 13px; font-size: 12px; color: var(--slate); cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .icon-btn:hover { border-color: var(--slate); color: var(--navy); }
+
+  .urgency-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-top: 6px; }
+  .u5 { background: #B71C1C; color: white; } .u4 { background: #E65100; color: white; }
+  .u3 { background: #F9A825; color: #2D1B00; } .u2 { background: #2E7D32; color: white; }
+  .u1 { background: #546E7A; color: white; }
+
+  .disclaimer { text-align: center; font-size: 11px; color: #90A4AE; padding: 5px 16px 10px; }
+
+  /* Modal */
+  .modal-overlay { display: flex; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 9999; align-items: center; justify-content: center; }
+  .modal-box { background: #fff; border-radius: 16px; padding: 32px; max-width: 420px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,.3); }
+  .modal-box h2 { font-size: 18px; font-weight: 700; color: var(--navy); text-align: center; margin-bottom: 8px; }
+  .modal-box p  { font-size: 13px; color: var(--slate); text-align: center; margin-bottom: 20px; line-height: 1.5; }
+  .modal-input { width: 100%; padding: 11px 14px; border: 1.5px solid #CFD8DC; border-radius: 10px; font-size: 13px; outline: none; font-family: monospace; margin-bottom: 6px; }
+  .modal-input:focus { border-color: var(--blue); }
+  .modal-err { color: var(--red); font-size: 12px; min-height: 16px; margin-bottom: 10px; }
+  .modal-btn { width: 100%; background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .modal-btn:hover { background: var(--blue2); }
+  .modal-note { font-size: 11px; color: #90A4AE; text-align: center; margin-top: 14px; }
+  .modal-note a { color: var(--blue); }
+
+  .error-msg { background: #FFF3E0; border: 1px solid #FFB74D; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #7F4700; margin: 4px 0; }
+
+  @media (max-width: 720px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div class="modal-overlay" id="apiModal" style="display:none;">
+  <div class="modal-box">
+    <div style="font-size:36px;text-align:center;margin-bottom:12px;">🔑</div>
+    <h2>Hugging Face Token</h2>
+    <p>Enter a Hugging Face User Access Token with Inference permissions. For a classroom demo, keep the Space private if possible.</p>
+    <input class="modal-input" id="apiKeyInput" type="password" placeholder="hf_…" autocomplete="off"
+      onkeydown="if(event.key==='Enter')submitKey()" />
+    <div class="modal-err" id="keyErr"></div>
+    <button class="modal-btn" onclick="submitKey()">Connect to Hugging Face →</button>
+    <p class="modal-note">Create a token at <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a></p>
+  </div>
+</div>
+
+<div class="shell">
+  <header>
+    <div class="logo">🏥</div>
+    <div><h1>City General Hospital</h1><p>AI Reception Assistant · Hugging Face Inference</p></div>
+    <div class="status-dot"><div class="dot"></div><span id="statusLabel">Online</span></div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="info-card card-ai">
+      <h3>🤖 AI Handles</h3>
+      <ul>
+        <li>✅ Symptom collection</li>
+        <li>✅ Urgency scoring (1–5)</li>
+        <li>✅ Wait time estimate</li>
+        <li>✅ FAQs &amp; directions</li>
+        <li>✅ Appointment booking</li>
+      </ul>
+    </div>
+    <div class="info-card card-human">
+      <h3>👨‍⚕️ Doctor Required</h3>
+      <ul>
+        <li>🔴 Clinical examination</li>
+        <li>🔴 Diagnosis &amp; treatment</li>
+        <li>🔴 Critical case response</li>
+        <li>🔴 Medication decisions</li>
+      </ul>
+    </div>
+    <div class="info-card card-dept">
+      <h3>🏢 Departments</h3>
+      <div class="dept-item"><span>Emergency</span><span class="dept-floor">Gate A, GF</span></div>
+      <div class="dept-item"><span>General OPD</span><span class="dept-floor">Floor 1</span></div>
+      <div class="dept-item"><span>Pediatrics</span><span class="dept-floor">Floor 2</span></div>
+      <div class="dept-item"><span>Cardiology</span><span class="dept-floor">Floor 3</span></div>
+      <div class="dept-item"><span>Pharmacy</span><span class="dept-floor">Gate B, GF</span></div>
+      <div class="dept-item"><span>Radiology</span><span class="dept-floor">Floor 1B</span></div>
+    </div>
+    <div class="info-card card-emer">
+      <h3>🚨 Emergency</h3>
+      <ul>
+        <li>📞 Call <strong>115</strong> immediately</li>
+        <li>🚪 Gate A, Ground Floor</li>
+        <li>⏰ Open 24 hours</li>
+      </ul>
+    </div>
+  </aside>
+
+  <div class="chat-area">
+    <div class="messages" id="messages"></div>
+    <div class="quick-replies" id="quickReplies">
+      <button class="qr-btn" onclick="sendQuick('Hello, I just arrived at the hospital')">👋 Just arrived</button>
+      <button class="qr-btn" onclick="sendQuick('I have chest pain and difficulty breathing')">❤️ Chest pain</button>
+      <button class="qr-btn" onclick="sendQuick('My child has a high fever')">🤒 Child fever</button>
+      <button class="qr-btn" onclick="sendQuick('I need a prescription renewal')">💊 Prescription</button>
+      <button class="qr-btn" onclick="sendQuick('What are the visiting hours?')">🕐 Visiting hours</button>
+    </div>
+    <div class="input-bar">
+      <button class="icon-btn" onclick="resetChat()">🗑️ New</button>
+      <button class="icon-btn" onclick="changeKey()">🔑 Key</button>
+      <input id="userInput" type="text" placeholder="Describe your symptoms or ask a question…" autocomplete="off" />
+      <button id="sendBtn" onclick="sendMessage()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="disclaimer">⚠️ This AI does not diagnose. Always consult a qualified doctor for medical decisions.</div>
+  </div>
+</div>
+
+<script>
+// ── Hugging Face Inference Config ───────────────────────────────────────────────
+// Uses Hugging Face's OpenAI-compatible Inference Providers router.
+// Model: google/gemma-2-2b-it (small instruction-tuned model)
+// Hugging Face model candidates. We try HF Inference first, then other
+// providers automatically. This avoids hard-coding a provider that may not be
+// enabled on a student's account.
+const HF_MODELS = [
+  "Qwen/Qwen3-4B-Instruct-2507:hf-inference",
+  "Qwen/Qwen2.5-1.5B-Instruct:hf-inference",
+  "google/gemma-2-2b-it:hf-inference",
+  "Qwen/Qwen3-4B-Instruct-2507:fastest",
+  "Qwen/Qwen2.5-1.5B-Instruct:fastest",
+  "google/gemma-2-2b-it:fastest"
+];
+let HF_MODEL = HF_MODELS[0];
+const HF_ENDPOINT = "https://router.huggingface.co/v1/chat/completions";
+
+const SYSTEM = `You are MediBot, an AI reception assistant for a classroom hospital workflow prototype. Be compassionate and concise.
+
+TASKS:
+1. Help with reception questions, directions, appointment/queue information and general non-diagnostic guidance.
+2. If the user describes symptoms, do NOT diagnose, prescribe medicine, or claim a medical emergency. Tell them that a qualified clinician must assess them.
+3. For this classroom prototype, you may provide an OPERATIONAL queue recommendation using the following demo categories only:
+   URGENCY:5 = CRITICAL DEMO PRIORITY
+   URGENCY:4 = URGENT DEMO PRIORITY
+   URGENCY:3 = MODERATE DEMO PRIORITY
+   URGENCY:2 = LOW DEMO PRIORITY
+   URGENCY:1 = ROUTINE DEMO PRIORITY
+4. Always include exactly one URGENCY:N tag when responding to a patient-flow message.
+5. The priority is only a simulated queue-support recommendation, NOT a diagnosis.
+6. Answer FAQs: visiting hours 10am–12pm and 4pm–7pm, pharmacy Gate B, emergency Gate A.
+7. Keep replies under 100 words.
+
+IMPORTANT:
+- Never diagnose.
+- Never recommend medications or treatment.
+- A doctor/qualified clinician must make final clinical decisions.
+- For levels 4–5, say that staff should review the case promptly; do not claim that a real emergency team has been dispatched.`;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let history = [];
+let busy    = false;
+
+function getKey() { return sessionStorage.getItem("hftoken") || ""; }
+function setKey(k) { sessionStorage.setItem("hftoken", k); }
+
+// ── Key modal ─────────────────────────────────────────────────────────────────
+function showModal() { document.getElementById("apiModal").style.display = "flex"; }
+function hideModal() { document.getElementById("apiModal").style.display = "none"; }
+
+function submitKey() {
+  const k = document.getElementById("apiKeyInput").value.trim();
+  if (!k.startsWith("hf_") || k.length < 20) {
+    document.getElementById("keyErr").textContent = "Please enter a valid Hugging Face token (starts with hf_…).";
+    return;
+  }
+  setKey(k);
+  hideModal();
+  startChat();
+}
+
+function changeKey() {
+  sessionStorage.removeItem("hftoken");
+  history = [];
+  document.getElementById("messages").innerHTML = "";
+  document.getElementById("apiKeyInput").value = "";
+  document.getElementById("keyErr").textContent = "";
+  showModal();
+}
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+function parseUrgency(text) {
+  const m = text.match(/URGENCY:(\d)/);
+  return m ? +m[1] : 0;
+}
+function cleanText(text) {
+  return text.replace(/URGENCY:\d(\s*[—–-]\s*\w+)?/g, "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function addBubble(role, text, urgency) {
+  const msgs = document.getElementById("messages");
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + role;
+
+  const avatarIcon = role === "bot" ? "🏥" : "👤";
+  const avatarClass = role === "bot" ? "bot" : "user";
+
+  const clean = cleanText(text);
+  let badge = "";
+  if (urgency >= 1) {
+    const labels = ["","Routine","Low","Moderate","Urgent","Critical"];
+    const cls    = ["","u1","u2","u3","u4","u5"];
+    badge = `<br><span class="urgency-badge ${cls[urgency]}">Level ${urgency} — ${labels[urgency]}</span>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="avatar ${avatarClass}">${avatarIcon}</div>
+    <div class="bubble">${clean.replace(/\n/g,"<br>")}${badge}</div>`;
+  msgs.appendChild(wrap);
+
+  if (urgency === 5) addAlert("critical");
+  else if (urgency === 4) addAlert("urgent");
+
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addAlert(type) {
+  const msgs = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "alert-bubble " + type;
+  div.innerHTML = type === "critical"
+    ? `<span>🚨</span><div><strong>CRITICAL DEMO PRIORITY</strong><br>Doctor / qualified clinician review is required promptly.</div>`
+    : `<span>⚠️</span><div><strong>URGENT DEMO PRIORITY</strong><br>Please request prompt clinician review.</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addError(msg) {
+  const msgs = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "error-msg";
+  div.textContent = "⚠️ " + msg;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "msg bot"; div.id = "typing";
+  div.innerHTML = `<div class="avatar bot">🏥</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function removeTyping() { const el=document.getElementById("typing"); if(el) el.remove(); }
+
+// ── Hugging Face API call ───────────────────────────────────────────────────────
+async function callHuggingFace(userText) {
+  const messages = [
+    { role: "system", content: SYSTEM },
+    ...history,
+    { role: "user", content: userText }
+  ];
+
+  let lastError = null;
+
+  for (const candidate of HF_MODELS) {
+    try {
+      const res = await fetch(HF_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${getKey()}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: candidate,
+          messages,
+          max_tokens: 220,
+          temperature: 0.4
+        })
+      });
+
+      const raw = await res.text();
+      let data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch (_) {}
+
+      if (!res.ok) {
+        const msg = data?.error?.message || raw || `HTTP ${res.status}`;
+        lastError = new Error(`Model ${candidate}: ${msg}`);
+        continue;
+      }
+
+      const reply = data?.choices?.[0]?.message?.content
+        ?? data?.choices?.[0]?.text
+        ?? data?.generated_text
+        ?? data?.output_text
+        ?? "";
+
+      if (typeof reply === "string" && reply.trim()) {
+        HF_MODEL = candidate;
+        history.push({ role: "user", content: userText });
+        history.push({ role: "assistant", content: reply });
+        return reply.trim();
+      }
+
+      lastError = new Error(`Model ${candidate} returned no text.`);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  throw lastError || new Error("No Hugging Face model/provider is currently available for this token.");
+}
+
+// ── Send flow ─────────────────────────────────────────────────────────────────
+async function sendMessage() {
+  if (busy) return;
+  const input = document.getElementById("userInput");
+  const text  = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  document.getElementById("quickReplies").style.display = "none";
+
+  addBubble("user", text, 0);
+  busy = true;
+  showTyping();
+
+  try {
+    const reply   = await callHuggingFace(text);
+    const urgency = parseUrgency(reply);
+    removeTyping();
+    addBubble("bot", reply, urgency);
+  } catch(e) {
+    removeTyping();
+    addError("Hugging Face could not generate a response. The app tried several supported models/providers. Details: " + e.message + " — Check that your token has ‘Make calls to Inference Providers’ permission.");
+  }
+  busy = false;
+}
+
+function sendQuick(text) { document.getElementById("userInput").value = text; sendMessage(); }
+
+function resetChat() {
+  history = [];
+  document.getElementById("messages").innerHTML = "";
+  document.getElementById("quickReplies").style.display = "flex";
+  startChat();
+}
+
+document.getElementById("userInput").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+function startChat() {
+  const welcome = "Welcome to City General Hospital! 🏥\n\nI'm MediBot, your AI reception assistant. I can help check you in, assess your urgency, and direct you to the right department.\n\nCould I start by asking your name and age?";
+  addBubble("bot", welcome, 0);
+  history.push({ role: "assistant", content: welcome });
+}
+
+if (!getKey()) { showModal(); }
+else { startChat(); }
+</script>
+</body>
+</html>
