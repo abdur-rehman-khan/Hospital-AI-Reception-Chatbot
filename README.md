@@ -7,6 +7,9 @@
 This project demonstrates how a browser-based AI chatbot can support hospital reception by collecting symptom information, answering common questions, providing general guidance, and flagging cases that require human attention.
 
 Built using plain HTML, CSS, and JavaScript, with the Claude API for AI-powered responses.
+## 📸 Application Screenshot
+
+![Hospital AI Chatbot](Hospital AI Reception Chatbot.png)
 
 ## ✨ Features
 
